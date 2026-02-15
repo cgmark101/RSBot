@@ -62,7 +62,7 @@
     System.Drawing.Color.Black
     };
             label1.GradientAnimation = false;
-            label1.Location = new System.Drawing.Point(29, 27);
+            label1.Location = new System.Drawing.Point(28, 26);
             label1.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             label1.Name = "label1";
             label1.Size = new System.Drawing.Size(112, 20);
@@ -91,7 +91,7 @@
             checkSaveSelection.BackColor = System.Drawing.Color.Transparent;
             checkSaveSelection.Depth = 0;
             checkSaveSelection.Font = new System.Drawing.Font("Segoe UI", 9F);
-            checkSaveSelection.Location = new System.Drawing.Point(143, 57);
+            checkSaveSelection.Location = new System.Drawing.Point(142, 56);
             checkSaveSelection.Margin = new System.Windows.Forms.Padding(0);
             checkSaveSelection.MouseLocation = new System.Drawing.Point(-1, -1);
             checkSaveSelection.Name = "checkSaveSelection";
@@ -138,19 +138,18 @@
             // 
             AutoScaleDimensions = new System.Drawing.SizeF(120F, 120F);
             AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
-            ClientSize = new System.Drawing.Size(487, 155);
-            ControlBox = false;
+            ClientSize = new System.Drawing.Size(481, 162);
             Controls.Add(btnOK);
             Controls.Add(buttonDeleteProfile);
             Controls.Add(buttonCreateProfile);
             Controls.Add(checkSaveSelection);
             Controls.Add(label1);
             Controls.Add(comboProfiles);
-            DwmMargin = -1;
-            Location = new System.Drawing.Point(0, 0);
+            DwmMargin = 1;
             Margin = new System.Windows.Forms.Padding(4);
+            MaximumSize = new System.Drawing.Size(487, 168);
+            MinimumSize = new System.Drawing.Size(487, 168);
             Name = "ProfileSelectionDialog";
-            Padding = new System.Windows.Forms.Padding(1);
             ShowIcon = false;
             SizeGripStyle = System.Windows.Forms.SizeGripStyle.Hide;
             StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

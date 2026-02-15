@@ -227,7 +227,7 @@
             Controls.Add(labelOr);
             Controls.Add(lblTitle);
             Controls.Add(pictureBox1);
-            DwmMargin = -1;
+            DwmMargin = 1;
             FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
             Location = new System.Drawing.Point(0, 0);
             Margin = new System.Windows.Forms.Padding(4);
