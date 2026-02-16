@@ -1,16 +1,17 @@
-﻿using System;
+﻿using RSBot.Core.Client.ReferenceObjects;
+using RSBot.Core.Cryptography;
+using RSBot.Core.Event;
+using RSBot.Core.Extensions;
+using RSBot.Core.Objects;
+using RSBot.NavMeshApi;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
-using RSBot.Core.Client.ReferenceObjects;
-using RSBot.Core.Cryptography;
-using RSBot.Core.Event;
-using RSBot.Core.Extensions;
-using RSBot.Core.Objects;
-using RSBot.NavMeshApi;
+using System.Text.RegularExpressions;
 
 namespace RSBot.Core.Client;
 
@@ -685,8 +686,22 @@ public class ReferenceManager
                 {
                     var itemRealName = refItem.GetRealName();
 
-                    if (itemRealName.IndexOf(searchPattern, StringComparison.InvariantCultureIgnoreCase) == -1)
-                        continue;
+                    if (!searchPattern.Contains('*') && !searchPattern.Contains('?'))
+                    {
+                        if (!itemRealName.Contains(searchPattern, StringComparison.InvariantCultureIgnoreCase))
+                            continue;
+                    }
+                    else
+                    {
+                        var regexPattern = "^" +
+                           Regex.Escape(searchPattern)
+                                .Replace(@"\*", ".*")
+                                .Replace(@"\?", ".")
+                           + "$";
+
+                        if (!Regex.IsMatch(itemRealName, regexPattern, RegexOptions.IgnoreCase))
+                            continue;
+                    }
                 }
 
                 // step 4 compare rare
