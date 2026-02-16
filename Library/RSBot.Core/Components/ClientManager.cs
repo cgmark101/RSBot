@@ -1,4 +1,6 @@
-﻿using System;
+﻿using RSBot.Core.Event;
+using RSBot.Core.Extensions;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -8,13 +10,11 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using RSBot.Core.Event;
-using RSBot.Core.Extensions;
 using static RSBot.Core.Extensions.NativeExtensions;
 
 namespace RSBot.Core.Components;
 
-public class ClientManager
+public partial class ClientManager
 {
     private static Process _process;
     private static readonly string GitHubSignatureUrl =
@@ -123,7 +123,6 @@ public class ClientManager
             return false;
         }
 
-        // UTF-16 + null terminator
         var buffer = Encoding.Unicode.GetBytes(fullPath + "\0");
         var pathLen = (uint)buffer.Length;
 
@@ -134,6 +133,9 @@ public class ClientManager
         var args = BuildCommandLineArguments(contentId, divisionIndex, gatewayIndex);
 
         var si = new STARTUPINFO();
+
+        CreateMutex(0, false, "Silkroad Online Launcher");
+        CreateMutex(0, false, "Ready");
 
         // Create suspended process
         if (!CreateProcess(
@@ -151,6 +153,8 @@ public class ClientManager
             Log.Error("Failed to create game process");
             return false;
         }
+
+        var semaphore = new Semaphore(0, 1, pi.dwProcessId.ToString());
 
         try
         {
@@ -170,12 +174,11 @@ public class ClientManager
             }
 
             ResumeThread(pi.hThread);
-            ResumeThread(pi.hProcess);
 
-            _process = Process.GetProcessById((int)pi.dwProcessId);
-            if (_process?.HasExited != false)
+            _process.Refresh();
+            if (_process.HasExited)
             {
-                Log.Error("Process exited immediately after start");
+                Log.Error($"Process exited immediately after start (exit code: 0x{_process.ExitCode:X})");
                 return false;
             }
 
@@ -223,10 +226,10 @@ public class ClientManager
     /// </summary>
     private static bool InjectClientLibrary(PROCESS_INFORMATION pi, byte[] buffer, uint pathLen)
     {
-        var handle = OpenProcess(PROCESS_ALL_ACCESS, false, pi.dwProcessId);
+        var handle = pi.hProcess;
         if (handle == IntPtr.Zero)
         {
-            Log.Error("Failed to open process");
+            Log.Error("Process handle is invalid");
             return false;
         }
 
@@ -284,7 +287,34 @@ public class ClientManager
 
                 try
                 {
-                    WaitForSingleObject(remoteThread, uint.MaxValue);
+                    Log.Debug("Waiting for LoadLibraryW to complete (10s timeout)...");
+                    var waitResult = WaitForSingleObject(remoteThread, 10000);
+                    if (waitResult != 0)
+                    {
+                        Log.Error("LoadLibraryW timed out after 10 seconds. The DLL injection may have deadlocked.");
+                        return false;
+                    }
+
+                    if (!GetExitCodeThread(remoteThread, out var exitCode))
+                    {
+                        Log.Error("Failed to get remote thread exit code");
+                        return false;
+                    }
+
+                    if (exitCode == 0)
+                    {
+                        Log.Error("LoadLibraryW failed: DLL could not be loaded. Verify the library exists and is compatible with the target process.");
+                        return false;
+                    }
+
+                    // NTSTATUS error codes have the high two bits set (0xC0000000+)
+                    if (exitCode >= 0xC0000000)
+                    {
+                        Log.Error($"LoadLibraryW crashed with NTSTATUS 0x{exitCode:X}. The DLL may be incompatible with the target process.");
+                        return false;
+                    }
+
+                    Log.Notify($"Client library injected successfully (module handle: 0x{exitCode:X})");
                     return true;
                 }
                 finally
@@ -297,9 +327,9 @@ public class ClientManager
                 VirtualFreeEx(handle, remotePath, 0, MEM_RELEASE);
             }
         }
-        finally
-        {
-            CloseHandle(handle);
+        catch (Exception ex) {
+            Log.Error($"DLL injection failed: {ex.Message}");
+            return false;
         }
     }
 
@@ -377,7 +407,8 @@ public class ClientManager
 
         try
         {
-            _process.Kill();
+            if (_process != null && _process.MainWindowHandle != IntPtr.Zero)
+                _process.Kill();
         }
         catch (Exception ex)
         {
@@ -390,7 +421,7 @@ public class ClientManager
     /// </summary>
     public static void SetTitle(string title)
     {
-        if (_process?.MainWindowHandle != IntPtr.Zero)
+        if (_process != null && _process.MainWindowHandle != IntPtr.Zero)
             SetWindowText(_process.MainWindowHandle, title);
     }
 
@@ -399,10 +430,8 @@ public class ClientManager
     /// </summary>
     public static void SetVisible(bool visible)
     {
-        if (_process?.MainWindowHandle == IntPtr.Zero)
-            return;
-
-        ShowWindow(_process.MainWindowHandle, visible ? SW_SHOW : SW_HIDE);
+        if (_process != null && _process.MainWindowHandle != IntPtr.Zero)
+            ShowWindow(_process.MainWindowHandle, visible ? SW_SHOW : SW_HIDE);
     }
 
     /// <summary>
@@ -498,8 +527,16 @@ public class ClientManager
 
             if (pi.hProcess != IntPtr.Zero)
             {
-                var process = Process.GetProcessById((int)pi.dwProcessId);
-                process?.Kill();
+                try
+                {
+                    var process = Process.GetProcessById((int)pi.dwProcessId);
+                    process?.Kill();
+                }
+                catch (ArgumentException)
+                {
+                    // Process has already exited
+                }
+
                 CloseHandle(pi.hProcess);
             }
         }

@@ -11,7 +11,6 @@
 
 #pragma comment(lib, "IPHLPAPI.lib")
 #pragma comment(lib, "ws2_32.lib")
-#pragma comment(linker, "/export:Direct3DCreate9=C:\\Windows\\System32\\d3d9.Direct3DCreate9")
 
 using namespace std;
 
@@ -162,9 +161,6 @@ void Install()
 	WSADATA wsaData = { 0 };
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
 
-	User_CreateMutexA(0, 0, "Silkroad Online Launcher");
-	User_CreateMutexA(0, 0, "Ready");
-
 	DetourRestoreAfterWith();
 	DetourTransactionBegin();
 	DetourUpdateThread(GetCurrentThread());
@@ -250,6 +246,7 @@ DWORD WINAPI Initialize(LPVOID lpParam) {
 extern "C" _declspec(dllexport) BOOL APIENTRY DllMain(HMODULE hModule, DWORD ulReason, LPVOID lpReserved)
 {
 	if (ulReason == DLL_PROCESS_ATTACH) {
+		DisableThreadLibraryCalls(hModule);
 		CloseHandle(CreateThread(NULL, 0, Initialize, NULL, 0, NULL));
 	}
 	return TRUE;

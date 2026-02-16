@@ -111,6 +111,12 @@ public static class NativeExtensions
     [DllImport("kernel32.dll")]
     public static extern uint WaitForSingleObject(IntPtr hHandle, uint dwMilliseconds);
 
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool GetExitCodeThread(IntPtr hThread, out uint lpExitCode);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern uint GetShortPathName(string lpszLongPath, char[] lpszShortPath, uint cchBuffer);
+
     [DllImport("kernel32.dll")]
     public static extern IntPtr LoadLibrary(string lpFileName);
 
